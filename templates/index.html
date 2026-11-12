@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¿Dónde es el evento? - UCB</title>
+    <!-- ENLACE CORREGIDO: Estilos de Leaflet para el mapa -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 15px; background: #f4f6f9; }
+        #mapa { height: 350px; width: 100%; border-radius: 10px; margin-bottom: 15px; border: 2px solid #003366; }
+        .card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .resultado { background: #e3f2fd; border-left: 5px solid #003366; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        button { background: #003366; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
+        select { padding: 8px; margin: 5px 0; width: 100%; }
+    </style>
+</head>
+<body>
+    <h2>Navegación Campus UCB</h2>
+
+    <div id="mapa"></div>
+
+    {% if resultado %}
+    <div class="resultado">
+        <strong>Ruta recomendada:</strong> {{ resultado.camino }} <br>
+        <strong>Distancia:</strong> {{ resultado.distancia }} m | <strong>Tiempo:</strong> {{ resultado.tiempo }} min
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <h3>Calcular Ruta</h3>
+        <form method="POST">
+            <label>Punto de partida:</label>
+            <select name="origen">
+                {% for punto in puntos %}
+                <option value="{{ punto }}">{{ punto }}</option>
+                {% endfor %}
+            </select>
+
+            <label>Destino:</label>
+            <select name="destino">
+                {% for punto in puntos %}
+                <option value="{{ punto }}">{{ punto }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" style="width: 100%; margin-top: 10px;">Trazar Ruta Más Corta</button>
+        </form>
+    </div>
+
+    <h3>Eventos UCB</h3>
+    {% for evento in eventos %}
+    <div class="card">
+        <strong>{{ evento.nombre }}</strong> ({{ evento.fecha }})<br>
+        <span>Ubicación: {{ evento.lugar }}</span>
+        <form method="POST" style="margin-top: 8px;">
+            <!-- CORREGIDO: Cambiado a "Atrio" para coincidir con mapa.py -->
+            <input type="hidden" name="origen" value="Atrio">
+            <input type="hidden" name="destino" value="{{ evento.lugar }}">
+            <button type="submit">Cómo llegar desde el Atrio</button>
+        </form>
+    </div>
+    {% endfor %}
+
+    <!-- ENLACE CORREGIDO: Script de Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('mapa').setView([-16.5225, -68.1116], 18);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 20,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        var puntosCampus = {{ coordenadas | tojson }};
+        for (var nombre in puntosCampus) {
+            L.marker(puntosCampus[nombre]).addTo(map).bindPopup("<b>" + nombre + "</b>");
+        }
+
+        {% if resultado %}
+        var rutaCoords = {{ resultado.coords | tojson }};
+        var lineaRuta = L.polyline(rutaCoords, {color: '#0055ff', weight: 6}).addTo(map);
+        map.fitBounds(lineaRuta.getBounds());
+        {% endif %}
+        map.on('click', function(e) {
+            alert("Copia esto: [" + e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5) + "]");
+        });
+    </script>
+</body>
+</html>
